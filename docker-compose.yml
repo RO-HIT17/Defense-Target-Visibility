@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: gisdb
+    restart: always
+    environment:
+      POSTGRES_USER: gisuser
+      POSTGRES_PASSWORD: gispass
+      POSTGRES_DB: gisdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
