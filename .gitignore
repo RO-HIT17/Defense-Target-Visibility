@@ -1,3 +1,4 @@
 pgdata
 data/demo*
 data/*.tif
+*/.venv
