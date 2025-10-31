@@ -1,0 +1,66 @@
+[
+  {
+    "observer": "obsA",
+    "name": "obsA_h5",
+    "lon": 71.485,
+    "lat": 34.289,
+    "height_m": 5.0,
+    "geojson": "viewshed_obsA_h5.geojson"
+  },
+  {
+    "observer": "obsA",
+    "name": "obsA_h10",
+    "lon": 71.485,
+    "lat": 34.289,
+    "height_m": 10.0,
+    "geojson": "viewshed_obsA_h10.geojson"
+  },
+  {
+    "observer": "obsA",
+    "name": "obsA_h50",
+    "lon": 71.485,
+    "lat": 34.289,
+    "height_m": 50.0,
+    "geojson": "viewshed_obsA_h50.geojson"
+  },
+  {
+    "observer": "obsA",
+    "name": "obsA_h100",
+    "lon": 71.485,
+    "lat": 34.289,
+    "height_m": 100.0,
+    "geojson": "viewshed_obsA_h100.geojson"
+  },
+  {
+    "observer": "obsB",
+    "name": "obsB_h5",
+    "lon": 71.385,
+    "lat": 34.189,
+    "height_m": 5.0,
+    "geojson": "viewshed_obsB_h5.geojson"
+  },
+  {
+    "observer": "obsB",
+    "name": "obsB_h10",
+    "lon": 71.385,
+    "lat": 34.189,
+    "height_m": 10.0,
+    "geojson": "viewshed_obsB_h10.geojson"
+  },
+  {
+    "observer": "obsB",
+    "name": "obsB_h50",
+    "lon": 71.385,
+    "lat": 34.189,
+    "height_m": 50.0,
+    "geojson": "viewshed_obsB_h50.geojson"
+  },
+  {
+    "observer": "obsB",
+    "name": "obsB_h100",
+    "lon": 71.385,
+    "lat": 34.189,
+    "height_m": 100.0,
+    "geojson": "viewshed_obsB_h100.geojson"
+  }
+]

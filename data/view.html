@@ -2,17 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Viewshed Visualization</title>
+  <title>Viewshed Visualization - obsA_h100</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    html,body,#map { height: 100%; margin: 0; padding: 0; }
+    html, body, #map { height: 100%; margin: 0; padding: 0; }
     .legend {
       background: white;
-      padding: 6px;
-      border-radius: 6px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      padding: 8px 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.25);
       font-family: sans-serif;
+      line-height: 1.4em;
+      font-size: 13px;
+    }
+    .legend h4 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -21,34 +27,59 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Create map
     const map = L.map('map');
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Load your GeoJSON
-    fetch('viewshed_obsB.geojson')
+    // Load metadata and display only obsA_h100
+    fetch('viewsheds/metadata.json')
       .then(r => r.json())
-      .then(data => {
-        const layer = L.geoJSON(data, {
+      .then(metadata => {
+        const obs = metadata.find(o => o.name === "obsA_h100");
+        if (!obs) throw new Error("Observer obsA_h100 not found in metadata");
+
+        // Load its GeoJSON
+        return Promise.all([obs, fetch('viewsheds/'+obs.geojson).then(r => r.json())]);
+      })
+      .then(([obs, geojson]) => {
+        const validFeatures = (geojson.features || []).filter(f =>
+          f.geometry && f.geometry.coordinates && f.geometry.coordinates.length > 0
+        );
+
+        if (validFeatures.length === 0) throw new Error("No valid GeoJSON features found.");
+
+        const layer = L.geoJSON({ type: "FeatureCollection", features: validFeatures }, {
           style: { color: '#00cc66', fillColor: '#00cc66', fillOpacity: 0.4, weight: 1 }
         }).addTo(map);
 
         const bounds = layer.getBounds();
         if (bounds.isValid()) map.fitBounds(bounds.pad(0.1));
 
-        L.control.layers({ "OSM": osm }, { "Viewshed": layer }, { collapsed: false }).addTo(map);
+        L.control.layers({ "OSM": osm }, { "Viewshed (obsA_h100)": layer }, { collapsed: false }).addTo(map);
 
+        // Add observer marker
+        L.marker([obs.lat, obs.lon]).addTo(map)
+          .bindPopup(`<b>${obs.name}</b><br>Lat: ${obs.lat}<br>Lon: ${obs.lon}<br>Height: ${obs.height_m} m`);
+
+        // Add metadata legend
         const legend = L.control({ position: 'topright' });
         legend.onAdd = () => {
           const div = L.DomUtil.create('div', 'legend');
-          div.innerHTML = '<b>Viewshed Layer</b><br/><div style="width:18px;height:12px;background:#00cc66;margin-top:5px"></div>';
+          div.innerHTML = `
+            <h4>Observer Metadata</h4>
+            <b>${obs.name}</b><br>
+            Lat: ${obs.lat.toFixed(4)}<br>
+            Lon: ${obs.lon.toFixed(4)}<br>
+            Height: ${obs.height_m} m<br>
+            <hr style="margin:4px 0">
+            <b>GeoJSON:</b> ${obs.geojson}
+          `;
           return div;
         };
         legend.addTo(map);
       })
-      .catch(err => console.error('Error loading GeoJSON:', err));
+      .catch(err => console.error('Error loading metadata or GeoJSON:', err));
   </script>
 </body>
 </html>

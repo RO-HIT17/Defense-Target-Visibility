@@ -7,15 +7,18 @@ import rasterio
 from rasterio.features import shapes
 from rasterio.warp import transform_geom
 
+# DEM file and output setup
 DEM_PATH = Path("data/demo_crop.tif")
-OUTPUT_DIR = Path("data")
+OUTPUT_DIR = Path("data/viewsheds")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
+# Hardcoded observer points
 OBS_POINTS = [
-    {"name": "obsA", "lon": 71.485, "lat": 34.289, "height_m": 50.0},
-    {"name": "obsB", "lon": 71.385, "lat": 34.189, "height_m": 50.0},
+    {"name": "obsA", "lon": 71.485, "lat": 34.289},
+    {"name": "obsB", "lon": 71.385, "lat": 34.189},
 ]
 
+HEIGHTS = [5.0, 10.0, 50.0, 100.0]   # Different observer heights (m)
 MAX_DISTANCE_M = 5000.0
 AZIMUTH_STEPS = 720
 STEP_M = None
@@ -48,7 +51,7 @@ def run_for_observer(obs, dem_path, out_tif, out_geojson, max_distance_m=5000, a
 
     obs_elev = sample_xy(observer_x, observer_y)
     if obs_elev is None:
-        raise SystemExit("Observer point falls on NoData in DEM.")
+        raise SystemExit(f"Observer {obs['name']} falls on NoData in DEM.")
 
     if step_m is None:
         pix_size_x, pix_size_y = transform.a, -transform.e
@@ -109,11 +112,34 @@ def run_for_observer(obs, dem_path, out_tif, out_geojson, max_distance_m=5000, a
 
 
 def main():
+    metadata = []
+
     for obs in OBS_POINTS:
-        name = obs["name"]
-        out_tif = OUTPUT_DIR / f"viewshed_{name}.tif"
-        out_geojson = OUTPUT_DIR / f"viewshed_{name}.geojson"
-        run_for_observer(obs, DEM_PATH, out_tif, out_geojson, MAX_DISTANCE_M, AZIMUTH_STEPS, STEP_M)
+        for h in HEIGHTS:
+            obs_copy = obs.copy()
+            obs_copy["height_m"] = h
+            obs_copy["name"] = f"{obs['name']}_h{int(h)}"
+
+            out_tif = OUTPUT_DIR / f"viewshed_{obs_copy['name']}.tif"
+            out_geojson = OUTPUT_DIR / f"viewshed_{obs_copy['name']}.geojson"
+
+            print(f"Processing {obs_copy['name']} ...")
+            run_for_observer(obs_copy, DEM_PATH, out_tif, out_geojson,
+                             MAX_DISTANCE_M, AZIMUTH_STEPS, STEP_M)
+
+            metadata.append({
+                "observer": obs["name"],
+                "name": obs_copy["name"],
+                "lon": obs_copy["lon"],
+                "lat": obs_copy["lat"],
+                "height_m": h,
+                "geojson": out_geojson.name
+            })
+
+    with open(OUTPUT_DIR / "metadata.json", "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+
+    print(f"✅ Saved all viewsheds + metadata to {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":
