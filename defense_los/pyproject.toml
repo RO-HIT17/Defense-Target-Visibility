@@ -6,7 +6,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.120.4",
+    "folium>=0.20.0",
     "numpy>=2.3.4",
     "rasterio>=1.4.3",
     "streamlit>=1.51.0",
+    "streamlit-folium>=0.25.3",
+    "uvicorn>=0.38.0",
 ]

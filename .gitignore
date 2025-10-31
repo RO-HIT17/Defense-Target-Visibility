@@ -2,3 +2,4 @@ pgdata
 data/demo*
 data/*.tif
 */.venv
+__pycache__/
