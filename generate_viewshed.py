@@ -12,7 +12,7 @@ OUTPUT_DIR = Path("data")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 OBS_POINTS = [
-    {"name": "obsA", "lon": 71.485, "lat": 34.289, "height_m": 50.0},
+    {"name": "obsA", "lon": 71.485, "lat": 34.289, "height_m": 5.0},
     {"name": "obsB", "lon": 71.385, "lat": 34.189, "height_m": 10.0},
 ]
 
