@@ -14,8 +14,8 @@ DEM_PATH = r"data\demo_aoi.tif"
 OUT_TIF = r"data\viewshed_py.tif"
 OUT_GEOJSON = r"data\viewshed_py.geojson"
 
-OBSERVER_LON = 71.985
-OBSERVER_LAT = 34.989
+OBSERVER_LON = 71.885
+OBSERVER_LAT = 34.189
 OBSERVER_HEIGHT_M = 50.0
 MAX_DISTANCE_M = 5000
 AZIMUTH_STEPS = 720
