@@ -2,23 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Viewshed Visualization - obsA_h100</title>
+  <title>Viewshed Overlap Visualization</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; }
     .legend {
       background: white;
-      padding: 8px 10px;
+      padding: 10px 12px;
       border-radius: 8px;
       box-shadow: 0 0 8px rgba(0,0,0,0.25);
       font-family: sans-serif;
-      line-height: 1.4em;
       font-size: 13px;
+      line-height: 1.4em;
     }
     .legend h4 {
-      margin: 0 0 5px 0;
+      margin: 0 0 6px 0;
       font-size: 14px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+      border-radius: 3px;
+      border: 1px solid #666;
     }
   </style>
 </head>
@@ -32,49 +44,70 @@
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Load metadata and display only obsA_h100
+    // Distinct colors for each viewshed
+    const colors = [
+      '#ff4d4d', '#4da6ff', '#33cc33', '#ffcc00',
+      '#cc66ff', '#00cccc', '#ff6600', '#9999ff'
+    ];
+
     fetch('viewsheds/metadata.json')
       .then(r => r.json())
-      .then(metadata => {
-        const obs = metadata.find(o => o.name === "obsA_h100");
-        if (!obs) throw new Error("Observer obsA_h100 not found in metadata");
+      .then(async metadata => {
+        const layers = [];
+        const colorMap = {};
 
-        // Load its GeoJSON
-        return Promise.all([obs, fetch('viewsheds/'+obs.geojson).then(r => r.json())]);
-      })
-      .then(([obs, geojson]) => {
-        const validFeatures = (geojson.features || []).filter(f =>
-          f.geometry && f.geometry.coordinates && f.geometry.coordinates.length > 0
-        );
+        // Loop through each entry and load its GeoJSON
+        for (let i = 0; i < metadata.length; i++) {
+          const obs = metadata[i];
+          const color = colors[i % colors.length];
+          colorMap[obs.name] = color;
 
-        if (validFeatures.length === 0) throw new Error("No valid GeoJSON features found.");
+          try {
+            const geojson = await fetch('viewsheds/' + obs.geojson).then(r => r.json());
+            const validFeatures = (geojson.features || []).filter(f =>
+              f.geometry && f.geometry.coordinates && f.geometry.coordinates.length > 0
+            );
 
-        const layer = L.geoJSON({ type: "FeatureCollection", features: validFeatures }, {
-          style: { color: '#00cc66', fillColor: '#00cc66', fillOpacity: 0.4, weight: 1 }
-        }).addTo(map);
+            if (validFeatures.length === 0) continue;
 
-        const bounds = layer.getBounds();
-        if (bounds.isValid()) map.fitBounds(bounds.pad(0.1));
+            const layer = L.geoJSON({ type: "FeatureCollection", features: validFeatures }, {
+              style: {
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.35,
+                weight: 1
+              }
+            }).addTo(map);
 
-        L.control.layers({ "OSM": osm }, { "Viewshed (obsA_h100)": layer }, { collapsed: false }).addTo(map);
+            L.marker([obs.lat, obs.lon])
+              .addTo(map)
+              .bindPopup(`<b>${obs.name}</b><br>${obs.observer}<br>Height: ${obs.height_m} m`);
 
-        // Add observer marker
-        L.marker([obs.lat, obs.lon]).addTo(map)
-          .bindPopup(`<b>${obs.name}</b><br>Lat: ${obs.lat}<br>Lon: ${obs.lon}<br>Height: ${obs.height_m} m`);
+            layers.push(layer);
+          } catch (err) {
+            console.warn(`Failed to load ${obs.geojson}`, err);
+          }
+        }
 
-        // Add metadata legend
+        // Fit map to all layers
+        const allBounds = L.featureGroup(layers).getBounds();
+        if (allBounds.isValid()) map.fitBounds(allBounds.pad(0.1));
+
+        // Build dynamic legend
         const legend = L.control({ position: 'topright' });
         legend.onAdd = () => {
           const div = L.DomUtil.create('div', 'legend');
-          div.innerHTML = `
-            <h4>Observer Metadata</h4>
-            <b>${obs.name}</b><br>
-            Lat: ${obs.lat.toFixed(4)}<br>
-            Lon: ${obs.lon.toFixed(4)}<br>
-            Height: ${obs.height_m} m<br>
-            <hr style="margin:4px 0">
-            <b>GeoJSON:</b> ${obs.geojson}
-          `;
+          div.innerHTML = '<h4>Viewshed Layers</h4>';
+          metadata.forEach(obs => {
+            if (colorMap[obs.name]) {
+              div.innerHTML += `
+                <div class="legend-item">
+                  <div class="legend-color" style="background:${colorMap[obs.name]}"></div>
+                  ${obs.name} (${obs.height_m} m)
+                </div>
+              `;
+            }
+          });
           return div;
         };
         legend.addTo(map);
