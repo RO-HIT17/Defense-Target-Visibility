@@ -4,6 +4,7 @@ import subprocess
 import json
 import os
 import uvicorn
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="Defense Visibility API")
 
@@ -57,6 +58,7 @@ def compute_los(
         data = json.load(f)
     return data
 
+app.mount("/static", StaticFiles(directory="data"), name="static")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

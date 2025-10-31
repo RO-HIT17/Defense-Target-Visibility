@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>3D Defense Visibility - India AOI</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Cesium.js"></script>
+    <link
+      href="https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/Widgets/widgets.css"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body,
+      #cesiumContainer {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cesiumContainer"></div>
+    <script>
+      window.CESIUM_BASE_URL = "https://cesium.com/downloads/cesiumjs/releases/1.121/Build/Cesium/";
+
+      // 🚨 Replace with your Cesium Ion token
+      Cesium.Ion.defaultAccessToken = "your_cesium_ion_token_here";
+
+      // --- Terrain + Imagery ---
+      const viewer = new Cesium.Viewer("cesiumContainer", {
+        terrainProvider: Cesium.CesiumTerrainProvider.fromIonAssetId(1), // World terrain (with elevation)
+        baseLayerPicker: false,
+        imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }), // Bing Aerial imagery
+        timeline: false,
+        animation: false,
+        sceneMode: Cesium.SceneMode.SCENE3D,
+      });
+
+      // --- Define the India-Pakistan AOI (your DEM bounding box) ---
+      const demoAOI = {
+        west: 70.99986111111112,
+        south: 33.99986111111111,
+        east: 72.0001388888889,
+        north: 35.000138888888884,
+      };
+
+      // --- Fly camera to that AOI (Himalayan area near LOC) ---
+      viewer.camera.flyTo({
+        destination: Cesium.Rectangle.fromDegrees(
+          demoAOI.west,
+          demoAOI.south,
+          demoAOI.east,
+          demoAOI.north
+        ),
+        duration: 4,
+      });
+
+      // --- Example: Add observer and line of sight ---
+      const observer = { lon: 71.985, lat: 34.55, height: 150 };
+      const target = { lon: 71.995, lat: 34.52, height: 20 };
+
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(observer.lon, observer.lat, observer.height),
+        point: { pixelSize: 12, color: Cesium.Color.RED },
+        label: { text: "Observer", font: "16px sans-serif", pixelOffset: new Cesium.Cartesian2(0, -20) },
+      });
+
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(target.lon, target.lat, target.height),
+        point: { pixelSize: 10, color: Cesium.Color.BLUE },
+        label: { text: "Target", font: "16px sans-serif", pixelOffset: new Cesium.Cartesian2(0, -20) },
+      });
+
+      viewer.entities.add({
+        polyline: {
+          positions: Cesium.Cartesian3.fromDegreesArrayHeights([
+            observer.lon, observer.lat, observer.height,
+            target.lon, target.lat, target.height,
+          ]),
+          width: 3,
+          material: Cesium.Color.YELLOW,
+        },
+      });
+
+      // --- Optional: Enable terrain exaggeration to make hills more visible ---
+      viewer.scene.verticalExaggeration = 2.5;
+    </script>
+  </body>
+</html>
