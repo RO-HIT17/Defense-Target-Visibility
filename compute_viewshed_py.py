@@ -16,7 +16,7 @@ OUT_GEOJSON = r"data\viewshed_py.geojson"
 
 
 OBSERVER_LON = 71.385
-OBSERVER_LAT = 34.289
+OBSERVER_LAT = 34.189
 
 OBSERVER_HEIGHT_M = 50.0      
 MAX_DISTANCE_M = 5000        
