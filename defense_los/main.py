@@ -34,15 +34,7 @@ def compute_viewshed(
 
 
 @app.get("/los")
-def compute_los(
-    lon1: float = Query(...),
-    lat1: float = Query(...),
-    lon2: float = Query(...),
-    lat2: float = Query(...),
-    h1: float = Query(30.0),
-    h2: float = Query(10.0),
-):
-    """Compute line-of-sight between two points."""
+def compute_los(lon1: float, lat1: float, lon2: float, lat2: float, h1: float, h2: float):
     cmd = [
         "python", "compute_los.py",
         "--lon1", str(lon1), "--lat1", str(lat1),
@@ -50,13 +42,9 @@ def compute_los(
         "--h1", str(h1), "--h2", str(h2),
         "--dem", "data/demo_aoi.tif"
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        return JSONResponse(status_code=500, content={"error": result.stderr})
-
+    subprocess.run(cmd, check=True)
     with open("data/los_result.json") as f:
-        data = json.load(f)
-    return data
+        return json.load(f)
 
 app.mount("/static", StaticFiles(directory="data"), name="static")
 

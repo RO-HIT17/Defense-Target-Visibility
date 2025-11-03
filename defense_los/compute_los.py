@@ -27,24 +27,45 @@ def sample_lonlat(x, y):
         return None
     return float(val)
 
+# Generate points along the LOS
 N = 200
 lons = np.linspace(args.lon1, args.lon2, N)
 lats = np.linspace(args.lat1, args.lat2, N)
 dists = np.linspace(0, 1, N)
 
-obs_elev = sample_lonlat(args.lon1, args.lat1) + args.h1
-tgt_elev = sample_lonlat(args.lon2, args.lat2) + args.h2
+obs_ground = sample_lonlat(args.lon1, args.lat1)
+tgt_ground = sample_lonlat(args.lon2, args.lat2)
+
+obs_elev = obs_ground + args.h1
+tgt_elev = tgt_ground + args.h2
 profile = [sample_lonlat(lon, lat) for lon, lat in zip(lons, lats)]
 
 visible = True
-max_angle = -999
+blocking_point = None
+
 for i in range(1, N):
     dist_ratio = dists[i]
     expected_height = obs_elev + dist_ratio * (tgt_elev - obs_elev)
-    dz = profile[i] - expected_height
-    if dz > 0:
+    ground_height = profile[i]
+
+    if ground_height is None:
+        continue
+
+    if ground_height > expected_height:
         visible = False
+        blocking_point = {
+            "lon": float(lons[i]),
+            "lat": float(lats[i]),
+            "elev": float(ground_height)
+        }
         break
 
+result = {
+    "visible": visible,
+    "observer": {"lon": args.lon1, "lat": args.lat1, "ground": obs_ground, "height": args.h1, "elev": obs_elev},
+    "target": {"lon": args.lon2, "lat": args.lat2, "ground": tgt_ground, "height": args.h2, "elev": tgt_elev},
+    "blocking_point": blocking_point
+}
+
 with open("data/los_result.json", "w") as f:
-    json.dump({"visible": visible, "observer": [args.lon1, args.lat1], "target": [args.lon2, args.lat2]}, f)
+    json.dump(result, f, indent=2)

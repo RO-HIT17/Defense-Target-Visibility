@@ -71,44 +71,98 @@ with tab1:
         ).add_to(m)
         st_folium(m, width=1100, height=600, key="viewshed_map")
 
-
-
-
-
 with tab2:
     st.subheader("Line of Sight Checker")
 
     with st.form("los_form"):
         c1, c2 = st.columns(2)
         with c1:
-            lon1 = st.number_input("Observer Longitude", 70.9998, 72.0001, 71.985, 0.0001)
-            lat1 = st.number_input("Observer Latitude", 33.9998, 35.0001, 34.189, 0.0001)
-            h1 = st.slider("Observer Height (m)", 0, 100, 40)
+            lon1 = st.number_input("Observer Longitude", 70.9998, 72.0001, 71.985, 0.0001, key="los_lon1")
+            lat1 = st.number_input("Observer Latitude", 33.9998, 35.0001, 34.189, 0.0001, key="los_lat1")
+            h1 = st.slider("Observer Height (m)", 0, 100, 40, key="los_h1")
         with c2:
-            lon2 = st.number_input("Target Longitude", 70.9998, 72.0001, 71.983, 0.0001)
-            lat2 = st.number_input("Target Latitude", 33.9998, 35.0001, 34.182, 0.0001)
-            h2 = st.slider("Target Height (m)", 0, 100, 20)
+            lon2 = st.number_input("Target Longitude", 70.9998, 72.0001, 71.983, 0.0001, key="los_lon2")
+            lat2 = st.number_input("Target Latitude", 33.9998, 35.0001, 34.182, 0.0001, key="los_lat2")
+            h2 = st.slider("Target Height (m)", 0, 100, 20, key="los_h2")
         submitted = st.form_submit_button("Check Line of Sight")
 
     if submitted:
         try:
             st.info("Checking LOS with backend...")
             data = get_los(lon1, lat1, lon2, lat2, h1, h2)
-            visible = data.get("visible", False)
-            st.session_state.los_params = {"lon1": lon1, "lat1": lat1, "lon2": lon2, "lat2": lat2}
-            st.session_state.los_visible = visible
+            st.session_state.los_params = data
             st.success("✅ LOS data received!")
         except Exception as e:
             st.error(f"Error connecting to backend: {e}")
 
-    
-    if st.session_state.los_params is not None:
+    if st.session_state.los_params:
         p = st.session_state.los_params
-        color = "green" if st.session_state.los_visible else "red"
-        m = folium.Map(location=[(p["lat1"] + p["lat2"]) / 2, (p["lon1"] + p["lon2"]) / 2], zoom_start=12)
-        folium.Marker([p["lat1"], p["lon1"]], tooltip="Observer", icon=folium.Icon(color="blue")).add_to(m)
-        folium.Marker([p["lat2"], p["lon2"]], tooltip="Target", icon=folium.Icon(color="orange")).add_to(m)
-        folium.PolyLine([[p["lat1"], p["lon1"]], [p["lat2"], p["lon2"]]], color=color, weight=4).add_to(m)
+        visible = p.get("visible", False)
+        blocking_point = p.get("blocking_point")
+        obs = p.get("observer", {})
+        tgt = p.get("target", {})
+
+        color = "green" if visible else "red"
+        m = folium.Map(location=[(obs["lat"] + tgt["lat"]) / 2, (obs["lon"] + tgt["lon"]) / 2],zoom_start=12        )
+
+        # Observer Marker
+        folium.Marker(
+            [obs["lat"], obs["lon"]],
+            tooltip=(
+                f"Observer\n"
+                f"Ground: {obs['ground']:.1f} m\n"
+                f"Height: {obs['height']:.1f} m\n"
+                f"Total Elev: {obs['elev']:.1f} m"
+            ),
+            icon=folium.Icon(color="blue", icon="user")
+        ).add_to(m)
+
+        # Target Marker
+        folium.Marker(
+            [tgt["lat"], tgt["lon"]],
+            tooltip=(
+                f"Target\n"
+                f"Ground: {tgt['ground']:.1f} m\n"
+                f"Height: {tgt['height']:.1f} m\n"
+                f"Total Elev: {tgt['elev']:.1f} m"
+            ),
+            icon=folium.Icon(color="orange", icon="flag")
+        ).add_to(m)
+
+        # Line between
+        folium.PolyLine(
+            [[obs["lat"], obs["lon"]], [tgt["lat"], tgt["lon"]]],
+            color=color, weight=4
+        ).add_to(m)
+
+        # Blocking point marker (if any)
+        if blocking_point:
+            folium.Marker(
+                [blocking_point["lat"], blocking_point["lon"]],
+                tooltip=(
+                    f"Blocking Point\n"
+                    f"Elev: {blocking_point['elev']:.1f} m"
+                ),
+                icon=folium.Icon(color="red", icon="remove-sign")
+            ).add_to(m)
+
         st_folium(m, width=1100, height=600, key="los_map")
-        if st.session_state.los_visible is not None:
-            st.success(f"Line of Sight: {'VISIBLE ✅' if st.session_state.los_visible else 'BLOCKED ❌'}")
+
+        if visible:
+            st.success("✅ Line of Sight: CLEAR — Target is visible")
+        else:
+            st.error("❌ Line of Sight: BLOCKED — Obstruction detected!")
+            if blocking_point:
+                st.info(
+                    f"Blocking Point: ({blocking_point['lat']:.5f}, {blocking_point['lon']:.5f}), "
+                    f"Elevation: {blocking_point['elev']:.1f} m"
+                )
+
+        st.markdown("---")
+        st.markdown(
+            f"""
+            **Observer Elevation:** {obs['elev']:.1f} m  
+            **Target Elevation:** {tgt['elev']:.1f} m  
+            **Status:** {"✅ Visible" if visible else "❌ Blocked"}
+            """
+        )
