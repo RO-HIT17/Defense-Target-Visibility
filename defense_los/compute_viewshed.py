@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 Improved raster viewshed script.
 
@@ -21,7 +21,7 @@ import numpy as np
 import rasterio
 from rasterio.features import shapes
 
-# Optional import (scipy) for morphological closing. Not required.
+
 try:
     from scipy.ndimage import binary_closing
     SCIPY_AVAILABLE = True
@@ -65,11 +65,11 @@ def main():
         height = src.height
         bounds = src.bounds
         print(f"DEM: size={width}x{height}, crs={crs}, bounds={bounds}")
-        # pixel sizes (absolute)
+        
         pix_size_x = abs(transform.a)
         pix_size_y = abs(transform.e)
 
-    # helper converters (transform returns (col, row) when applied to coords)
+    
     def lonlat_to_rowcol(x, y):
         col, row = ~transform * (x, y)
         return int(round(row)), int(round(col))
@@ -83,19 +83,19 @@ def main():
             return None
         return float(val)
 
-    # observer ground elevation
+    
     obs_elev = sample_lonlat(OBSERVER_LON, OBSERVER_LAT)
     if obs_elev is None:
         raise SystemExit("Observer point falls on NoData in DEM. Pick a nearby valid coordinate.")
     print(f"Observer (lon,lat) = ({OBSERVER_LON}, {OBSERVER_LAT}), ground elev = {obs_elev:.3f} m, eye height = {OBSERVER_HEIGHT_M} m")
 
-    # meters per degree at observer latitude
+    
     mpd_lat = METERS_PER_DEG_LAT
     mpd_lon = meters_per_deg_lon(OBSERVER_LAT)
 
-    # step size: choose something no larger than pixel diagonal, and smaller to avoid skipping
+    
     meters_per_pixel = math.hypot(pix_size_x * mpd_lon, pix_size_y * mpd_lat)
-    step_m = min(meters_per_pixel * 0.6, meters_per_pixel)  # step <= pixel diagonal (use 60% of pixel)
+    step_m = min(meters_per_pixel * 0.6, meters_per_pixel)  
     if step_m <= 0:
         step_m = meters_per_pixel
 
@@ -109,12 +109,12 @@ def main():
     azimuths = np.linspace(0, two_pi, AZIMUTH_STEPS, endpoint=False)
 
     for i, theta in enumerate(azimuths):
-        # log progress every N rays
+        
         if i % max(1, AZIMUTH_STEPS // 16) == 0:
             print(f"Processing azimuth {i+1}/{AZIMUTH_STEPS} ...")
         sin_t = math.sin(theta)
         cos_t = math.cos(theta)
-        max_angle = -1e9  # keep track of maximum elevation angle along the ray
+        max_angle = -1e9  
 
         for step_idx in range(1, max_steps + 1):
             d_m = step_idx * step_m
@@ -125,42 +125,42 @@ def main():
 
             elev = sample_lonlat(samp_lon, samp_lat)
             if elev is None:
-                # outside DEM or nodata; stop this ray
+                
                 break
 
-            # compute elevation angle correctly:
-            # eye level = obs_elev + OBSERVER_HEIGHT_M
+            
+            
             dz = elev - (obs_elev + OBSERVER_HEIGHT_M)
             horizontal_dist_m = d_m
             elev_angle = math.atan2(dz, horizontal_dist_m)
 
-            # require an angular margin (ANGLE_TOL) to reduce speckle
+            
             if elev_angle > max_angle + ANGLE_TOL:
-                # visible point
+                
                 max_angle = elev_angle
                 r, c = lonlat_to_rowcol(samp_lon, samp_lat)
                 if 0 <= r < visible.shape[0] and 0 <= c < visible.shape[1]:
                     visible[r, c] = 1
-            # else: not visible; continue scanning because terrain might rise later and become visible
+            
 
-    # Optional smoothing (morphological closing) to remove small speckles
+    
     if args.smooth:
         if SCIPY_AVAILABLE:
             print("Applying morphological closing (scipy) to remove speckle ...")
-            # use a small structuring element
+            
             closed = binary_closing(visible.astype(bool), structure=np.ones((3, 3)))
             visible = closed.astype(np.uint8)
         else:
             print("Skipping smoothing: scipy not available. Install scipy to enable smoothing (--smooth)")
 
-    # export GeoJSON polygons (convert connected visible pixels to polygons)
+    
     mask = visible == 1
     shapes_gen = shapes(visible, mask=mask, transform=transform)
     features = []
     count = 0
     for geom, val in shapes_gen:
         if val == 1:
-            # geometry is already in raster CRS (same as DEM). We will export as-is.
+            
             features.append({"type": "Feature", "properties": {"visible": 1}, "geometry": geom})
             count += 1
 
